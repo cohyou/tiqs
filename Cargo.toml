@@ -1,0 +1,6 @@
+[package]
+name = "tiqs"
+version = "0.1.0"
+authors = ["cohyou <cohyou@ironoir.io>"]
+
+[dependencies]
