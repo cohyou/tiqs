@@ -1,5 +1,3 @@
-#![feature(trace_macros)]
-
 macro_rules! cat {
     ([ $( $object:ident )* ] [ $( $arrow_name:ident : $domain:ident -> $codomain:ident )* ]) => ({
         let mut objects = Vec::new();
