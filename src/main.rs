@@ -1,3 +1,15 @@
+#![feature(trace_macros)]
+
+macro_rules! cat {
+    ([ $( $object:ident )* ] [ $( $arrow_name:ident : $domain:ident -> $codomain:ident )* ]) => ({
+        let mut objects = Vec::new();
+        $( objects.push(stringify!($object)); )*
+        let mut arrows = Vec::new();
+        $( arrows.push((stringify!($arrow_name), stringify!($domain), stringify!($codomain))); )*
+        new_category(objects, arrows)
+    })
+}
+
 use std::fmt::Display;
 use std::collections::HashMap;
 
@@ -52,18 +64,18 @@ fn new_category(objects: Vec<&str>, arrow_names: Vec<(&str, &str, &str)>) -> Cat
 }
 
 fn main() {
-    let arrows1 = vec![
-        ("f", "A", "B"),
-        ("g", "A", "C"),
-        ("h", "B", "C")
-    ];
-    let category1 = new_category(vec!["A", "B", "C"], arrows1);
+    let category1 = cat!(
+        [A B C]
+        [f: A -> B
+         g: A -> C
+         h: B -> C]
+    );
     check_isomorphism(category1, "A", "B");
 
-    let arrows2 = vec![
-        ("f", "A", "B"),
-        ("g", "B", "A")
-    ];
-    let category2 = new_category(vec!["A", "B"], arrows2);
+    let category2 = cat!(
+        [A B]
+        [f: A -> B
+         g: B -> A]
+    );
     check_isomorphism(category2, "A", "B");
 }
