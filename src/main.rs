@@ -63,7 +63,7 @@ trait Functor {
 
 struct Zero {}
 
-impl Category for ZeroUnit {
+impl Category for Zero {
     type Object = ();
     type Arrow = ();
 
@@ -76,6 +76,6 @@ impl Category for ZeroUnit {
 }
 
 fn main() {
-    let zero = ZeroUnit {};
+    let zero = Zero {};
     println!("{:?}", "hello category!");
 }
