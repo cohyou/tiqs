@@ -41,6 +41,19 @@ trait Functor {
     fn send_arrows(&self, c: <<Self as Functor>::C as Category>::Arrow) -> <<Self as Functor>::D as Category>::Arrow;
 }
 
+trait Foo {
+    fn bar<'a>(&'a self) -> Box<Iterator<Item=&'a u8>>;
+}
+
+struct Baz {}
+
+impl Foo for Baz {
+    fn bar<'a>(&'a self) -> Box<Iterator<Item=&'a u8> + 'a> {
+        let v = vec![1u8];
+        Box::new(v.iter())
+    }
+}
+
 // #[derive(PartialEq, Eq, Hash)]
 // struct CategoryObject {}
 //
