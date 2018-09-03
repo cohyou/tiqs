@@ -1,5 +1,5 @@
 use std::cmp::PartialEq;
-use std::collections::HashSet;
+use std::iter::empty;
 
 trait Category {
     type Object: PartialEq;
@@ -20,8 +20,8 @@ trait Category {
         self.composition_internal(f, g)
     }
 
-    fn objects() -> HashSet<Self::Object>;
-    fn arrows() -> HashSet<Self::Arrow>;
+    fn objects() -> Box<Iterator<Item=Self::Object>>;
+    fn arrows() -> Box<Iterator<Item=Self::Arrow>>;
 
     fn associativity(&self, f: Self::Arrow, g: Self::Arrow, k: Self::Arrow) -> bool {
         self.ci(&self.ci(&f, &g), &k) == self.ci(&f, &self.ci(&g, &k))
@@ -41,39 +41,6 @@ trait Functor {
     fn send_arrows(&self, c: <<Self as Functor>::C as Category>::Arrow) -> <<Self as Functor>::D as Category>::Arrow;
 }
 
-trait Foo {
-    fn bar<'a>(&'a self) -> Box<Iterator<Item=&'a u8>>;
-}
-
-struct Baz {}
-
-impl Foo for Baz {
-    fn bar<'a>(&'a self) -> Box<Iterator<Item=&'a u8> + 'a> {
-        let v = vec![1u8];
-        Box::new(v.iter())
-    }
-}
-
-// #[derive(PartialEq, Eq, Hash)]
-// struct CategoryObject {}
-//
-// #[derive(PartialEq, Eq, Hash)]
-// struct CategoryArrow {}
-//
-// struct Zero {}
-//
-// impl Category for Zero {
-//     type Object = CategoryObject;
-//     type Arrow = CategoryArrow;
-//
-//     fn domain(&self, _f: &CategoryArrow) -> CategoryObject { CategoryObject {} }
-//     fn codomain(&self, _f: &CategoryArrow) -> CategoryObject { CategoryObject {} }
-//     fn identity(&self, _a: CategoryObject) -> CategoryArrow { CategoryArrow {} }
-//     fn composition_internal(&self, _f: &CategoryArrow, _g: &CategoryArrow) -> CategoryArrow { CategoryArrow {} }
-//     fn objects() -> HashSet<CategoryObject> { HashSet::new() }
-//     fn arrows() -> HashSet<CategoryArrow> { HashSet::new() }
-// }
-
 struct Zero {}
 
 impl Category for Zero {
@@ -84,11 +51,11 @@ impl Category for Zero {
     fn codomain(&self, _f: &()) {}
     fn identity(&self, _a: ()) {}
     fn composition_internal(&self, _f: &(), _g: &()) {}
-    fn objects() -> HashSet<()> { HashSet::new() }
-    fn arrows() -> HashSet<()> { HashSet::new() }
+    fn objects() -> Box<Iterator<Item=()>> { Box::new(empty()) }
+    fn arrows() -> Box<Iterator<Item=()>> { Box::new(empty()) }
 }
 
 fn main() {
-    let zero = Zero {};
+    let _zero = Zero {};
     println!("{:?}", "hello category!");
 }
