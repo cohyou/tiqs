@@ -1,5 +1,6 @@
 use std::cmp::PartialEq;
 use std::iter::empty;
+use std::iter::once;
 
 trait Category {
     type Object: PartialEq;
@@ -7,7 +8,7 @@ trait Category {
 
     fn domain(&self, f: &Self::Arrow) -> Self::Object;
     fn codomain(&self, f: &Self::Arrow) -> Self::Object;
-    fn identity(&self, a: Self::Object) -> Self::Arrow;
+    fn identity(&self, a: &Self::Object) -> Self::Arrow;
     fn composition(&self, f: Self::Arrow, g: Self::Arrow) -> Option<Self::Arrow> {
         if self.codomain(&f) != self.domain(&g) {
             None
@@ -20,17 +21,17 @@ trait Category {
         self.composition_internal(f, g)
     }
 
-    fn objects() -> Box<Iterator<Item=Self::Object>>;
-    fn arrows() -> Box<Iterator<Item=Self::Arrow>>;
+    fn objects(&self) -> Box<Iterator<Item=Self::Object>>;
+    fn arrows(&self) -> Box<Iterator<Item=Self::Arrow>>;
 
     fn associativity(&self, f: Self::Arrow, g: Self::Arrow, k: Self::Arrow) -> bool {
         self.ci(&self.ci(&f, &g), &k) == self.ci(&f, &self.ci(&g, &k))
     }
     fn unit_law_domain(&self, o: Self::Object, f: Self::Arrow) -> bool {
-        self.ci(&self.identity(o), &f) == f
+        self.ci(&self.identity(&o), &f) == f
     }
     fn unit_law_codmain(&self, o: Self::Object, f: Self::Arrow) -> bool {
-        self.ci(&f, &self.identity(o)) == f
+        self.ci(&f, &self.identity(&o)) == f
     }
 }
 
@@ -41,7 +42,7 @@ trait Functor {
     fn send_arrows(&self, c: <<Self as Functor>::C as Category>::Arrow) -> <<Self as Functor>::D as Category>::Arrow;
 }
 
-struct Zero {}
+struct Zero;
 
 impl Category for Zero {
     type Object = ();
@@ -49,10 +50,37 @@ impl Category for Zero {
 
     fn domain(&self, _f: &()) {}
     fn codomain(&self, _f: &()) {}
-    fn identity(&self, _a: ()) {}
+    fn identity(&self, _a: &()) {}
     fn composition_internal(&self, _f: &(), _g: &()) {}
-    fn objects() -> Box<Iterator<Item=()>> { Box::new(empty()) }
-    fn arrows() -> Box<Iterator<Item=()>> { Box::new(empty()) }
+    fn objects(&self) -> Box<Iterator<Item=()>> { Box::new(empty()) }
+    fn arrows(&self) -> Box<Iterator<Item=()>> { Box::new(empty()) }
+}
+
+struct One {
+    object: CategoryObject,
+    arrow: CategoryArrow
+}
+#[derive(PartialEq)]
+struct CategoryObject;
+#[derive(PartialEq)]
+struct CategoryArrow;
+
+impl One {
+    fn new() -> One {
+        One { object: CategoryObject {}, arrow: CategoryArrow {} }
+    }
+}
+
+impl Category for One {
+    type Object = CategoryObject;
+    type Arrow = CategoryArrow;
+
+    fn domain(&self, _f: &CategoryArrow) -> CategoryObject { self.object }
+    fn codomain(&self, _f: &CategoryArrow) -> CategoryObject { self.object }
+    fn identity(&self, _a: &CategoryObject) -> CategoryArrow { self.arrow }
+    fn composition_internal(&self, _f: &CategoryArrow, _g: &CategoryArrow) -> CategoryArrow { self.arrow }
+    fn objects(&self) -> Box<Iterator<Item=CategoryObject>> { Box::new(once(self.object)) }
+    fn arrows(&self) -> Box<Iterator<Item=CategoryArrow>> { Box::new(once(self.arrow)) }
 }
 
 fn main() {
