@@ -1,3 +1,64 @@
+macro_rules! cat {
+    ($n:ident [ $( $object:ident )* ]) => {
+        #[derive(Default)]
+        struct $n {
+            objects: [NamedCategoryObject; 3],
+            arrows: [NamedCategoryArrow; 6],
+        }
+
+        impl Category for $n {
+            type Object = NamedCategoryObject;
+            type Arrow = NamedCategoryArrow;
+
+            fn domain(&self, f: &NamedCategoryArrow) -> &NamedCategoryObject {
+                match f {
+                    _ if f == &self.arrows[0] => &self.objects[0],
+                    _ if f == &self.arrows[1] => &self.objects[1],
+                    _ if f == &self.arrows[2] => &self.objects[0],
+                    _ => panic!(""),
+                }
+            }
+
+            fn codomain(&self, f: &NamedCategoryArrow) -> &NamedCategoryObject {
+                match f {
+                    _ if f == &self.arrows[0] => &self.objects[0],
+                    _ if f == &self.arrows[1] => &self.objects[1],
+                    _ if f == &self.arrows[2] => &self.objects[1],
+                    _ => panic!(""),
+                }
+            }
+
+            fn identity(&self, o: &NamedCategoryObject) -> &NamedCategoryArrow {
+                match o {
+                    _ if o == &self.objects[0] => &self.arrows[0],
+                    _ if o == &self.objects[1] => &self.arrows[1],
+                    _ => panic!(""),
+                }
+            }
+
+            fn composition_internal<'a>(&self, f: &'a NamedCategoryArrow, g: &'a NamedCategoryArrow) -> &'a NamedCategoryArrow {
+                if f == g {
+                    f
+                } else if f == &self.arrows[0] && g == &self.arrows[2] {
+                    g
+                } else if f == &self.arrows[2] && g == &self.arrows[1] {
+                    f
+                } else {
+                    panic!("")
+                }
+            }
+
+            fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a NamedCategoryObject> + 'a> {
+                Box::new(self.objects.into_iter())
+            }
+
+            fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a NamedCategoryArrow> + 'a> {
+                Box::new(self.arrows.into_iter())
+            }
+        }
+    }
+}
+
 use std::cmp::PartialEq;
 use std::iter::empty;
 use std::iter::once;
@@ -135,40 +196,51 @@ impl Category for Two {
     }
 }
 
+#[derive(PartialEq, Default)]
+struct NamedCategoryObject(&'static str);
+
+#[derive(PartialEq, Default)]
+struct NamedCategoryArrow(&'static str);
+
+let v = vec![];
+
+cat!(Three [X Y Z]);
+
 fn main() {
     let _zero = Zero {};
     let _one = One::new();
     let _two = Two::default();
+    let _three = Three::default();
 
     println!("{:?}", "hello category!");
 
-    fn triangle(n: i32) -> i32 {
-        let mut sum = 0;
-        for i in 1..n+1 {
-            sum += i;
-        }
-        sum
-    }
-    println!("{:?}", triangle(10));
-
-    fn triangle2(n: i32) -> i32 {
-        (1..n+1).fold(0, |sum, item| sum + item)
-    }
-    println!("{:?}", triangle2(10));
-
-    println!("There's:");
-    let v = vec!["antimony", "arsenic", "aluminum", "selenium"];
-
-    for element in &v {
-        println!("{}", element);
-    }
-
-    println!("There's:");
-    let v2 = vec!["antimony", "arsenic", "aluminum", "selenium"];
-    let mut iterator = (&v2).into_iter();
-    while let Some(element) = iterator.next() {
-        println!("{}", element);
-    }
+    // fn triangle(n: i32) -> i32 {
+    //     let mut sum = 0;
+    //     for i in 1..n+1 {
+    //         sum += i;
+    //     }
+    //     sum
+    // }
+    // println!("{:?}", triangle(10));
+    //
+    // fn triangle2(n: i32) -> i32 {
+    //     (1..n+1).fold(0, |sum, item| sum + item)
+    // }
+    // println!("{:?}", triangle2(10));
+    //
+    // println!("There's:");
+    // let v = vec!["antimony", "arsenic", "aluminum", "selenium"];
+    //
+    // for element in &v {
+    //     println!("{}", element);
+    // }
+    //
+    // println!("There's:");
+    // let v2 = vec!["antimony", "arsenic", "aluminum", "selenium"];
+    // let mut iterator = (&v2).into_iter();
+    // while let Some(element) = iterator.next() {
+    //     println!("{}", element);
+    // }
 
     let v = vec![4, 20, 12, 8, 6];
     let mut iterator = v.iter();
