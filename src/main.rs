@@ -80,11 +80,8 @@ impl Category for One {
 
 #[derive(Default)]
 struct Two {
-    object_A: CategoryObject,
-    object_B: CategoryObject,
-    arrow_a: CategoryArrow,
-    arrow_b: CategoryArrow,
-    arrow_f: CategoryArrow
+    objects: [CategoryObject; 2],
+    arrows: [CategoryArrow; 3],
 }
 
 impl Category for Two {
@@ -93,43 +90,48 @@ impl Category for Two {
 
     fn domain(&self, f: &CategoryArrow) -> &CategoryObject {
         match f {
-            _ if f == &self.arrow_a => &self.object_A,
-            _ if f == &self.arrow_b => &self.object_B,
-            _ if f == &self.arrow_f => &self.object_A,
+            _ if f == &self.arrows[0] => &self.objects[0],
+            _ if f == &self.arrows[1] => &self.objects[1],
+            _ if f == &self.arrows[2] => &self.objects[0],
             _ => panic!(""),
         }
     }
+
     fn codomain(&self, f: &CategoryArrow) -> &CategoryObject {
         match f {
-            _ if f == &self.arrow_a => &self.object_A,
-            _ if f == &self.arrow_b => &self.object_B,
-            _ if f == &self.arrow_f => &self.object_B,
+            _ if f == &self.arrows[0] => &self.objects[0],
+            _ if f == &self.arrows[1] => &self.objects[1],
+            _ if f == &self.arrows[2] => &self.objects[1],
             _ => panic!(""),
         }
     }
+
     fn identity(&self, o: &CategoryObject) -> &CategoryArrow {
         match o {
-            _ if o == &self.object_A => &self.arrow_a,
-            _ if o == &self.object_B => &self.arrow_b,
+            _ if o == &self.objects[0] => &self.arrows[0],
+            _ if o == &self.objects[1] => &self.arrows[1],
             _ => panic!(""),
         }
     }
+
     fn composition_internal<'a>(&self, f: &'a CategoryArrow, g: &'a CategoryArrow) -> &'a CategoryArrow {
         if f == g {
             f
-        } else if f == &self.arrow_a && g == &self.arrow_f {
+        } else if f == &self.arrows[0] && g == &self.arrows[2] {
             g
-        } else if f == &self.arrow_f && g == &self.arrow_b {
+        } else if f == &self.arrows[2] && g == &self.arrows[1] {
             f
         } else {
             panic!("")
         }
     }
+
     fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a CategoryObject> + 'a> {
-        Box::new([&self.object_A, &self.object_B].iter())
+        Box::new(self.objects.into_iter())
     }
+
     fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a CategoryArrow> + 'a> {
-        Box::new(once(&self.arrow_a))
+        Box::new(self.arrows.into_iter())
     }
 }
 
@@ -139,4 +141,66 @@ fn main() {
     let _two = Two::default();
 
     println!("{:?}", "hello category!");
+
+    fn triangle(n: i32) -> i32 {
+        let mut sum = 0;
+        for i in 1..n+1 {
+            sum += i;
+        }
+        sum
+    }
+    println!("{:?}", triangle(10));
+
+    fn triangle2(n: i32) -> i32 {
+        (1..n+1).fold(0, |sum, item| sum + item)
+    }
+    println!("{:?}", triangle2(10));
+
+    println!("There's:");
+    let v = vec!["antimony", "arsenic", "aluminum", "selenium"];
+
+    for element in &v {
+        println!("{}", element);
+    }
+
+    println!("There's:");
+    let v2 = vec!["antimony", "arsenic", "aluminum", "selenium"];
+    let mut iterator = (&v2).into_iter();
+    while let Some(element) = iterator.next() {
+        println!("{}", element);
+    }
+
+    let v = vec![4, 20, 12, 8, 6];
+    let mut iterator = v.iter();
+    assert_eq!(iterator.next(), Some(&4));
+    assert_eq!(iterator.next(), Some(&20));
+    assert_eq!(iterator.next(), Some(&12));
+    assert_eq!(iterator.next(), Some(&8));
+    assert_eq!(iterator.next(), Some(&6));
+    assert_eq!(iterator.next(), None);
+
+
+    use std::ffi::OsStr;
+    use std::path::Path;
+
+    let path = Path::new("C:/Users/JimB/Downloads/Fedora.iso");
+    let mut iterator = path.iter();
+    assert_eq!(iterator.next(), Some(OsStr::new("C:")));
+    assert_eq!(iterator.next(), Some(OsStr::new("Users")));
+    assert_eq!(iterator.next(), Some(OsStr::new("JimB")));
+
+
+    // You should usually use HashSet,
+    // but its iteration order is nondeterministic,
+    // so BTreeSet works better in examples.
+
+    use std::collections::BTreeSet;
+    let mut favorites = BTreeSet::new();
+    favorites.insert("Lucy in the Sky With Diamonds".to_string());
+    favorites.insert("Liebesträume No. 3".to_string());
+
+    let mut it = favorites.into_iter();
+    assert_eq!(it.next(), Some("Liebesträume No. 3".to_string()));
+    assert_eq!(it.next(), Some("Lucy in the Sky With Diamonds".to_string()));
+    assert_eq!(it.next(), None);
 }
