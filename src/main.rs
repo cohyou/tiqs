@@ -1,58 +1,75 @@
 macro_rules! cat {
     ($n:ident [ $( $object:ident )* ]) => {
         #[derive(Default)]
-        struct $n {
-            objects: [NamedCategoryObject; 3],
-            arrows: [NamedCategoryArrow; 6],
+        struct $n<Object, Arrow> {
+            objects: [Object; 3],
+            arrows: [Arrow; 6],
         }
 
-        impl Category for $n {
-            type Object = NamedCategoryObject;
-            type Arrow = NamedCategoryArrow;
+        impl<O: PartialEq, A: PartialEq> Category for $n<O, A> {
+            type Object = O;
+            type Arrow = A;
 
-            fn domain(&self, f: &NamedCategoryArrow) -> &NamedCategoryObject {
+            fn domain(&self, f: &Self::Arrow) -> &Self::Object {
                 match f {
                     _ if f == &self.arrows[0] => &self.objects[0],
                     _ if f == &self.arrows[1] => &self.objects[1],
-                    _ if f == &self.arrows[2] => &self.objects[0],
+                    _ if f == &self.arrows[2] => &self.objects[2],
+                    _ if f == &self.arrows[3] => &self.objects[1],
+                    _ if f == &self.arrows[4] => &self.objects[2],
+                    _ if f == &self.arrows[5] => &self.objects[2],
                     _ => panic!(""),
                 }
             }
 
-            fn codomain(&self, f: &NamedCategoryArrow) -> &NamedCategoryObject {
+            fn codomain(&self, f: &Self::Arrow) -> &Self::Object {
                 match f {
                     _ if f == &self.arrows[0] => &self.objects[0],
                     _ if f == &self.arrows[1] => &self.objects[1],
-                    _ if f == &self.arrows[2] => &self.objects[1],
+                    _ if f == &self.arrows[2] => &self.objects[2],
+                    _ if f == &self.arrows[3] => &self.objects[0],
+                    _ if f == &self.arrows[4] => &self.objects[1],
+                    _ if f == &self.arrows[5] => &self.objects[0],
                     _ => panic!(""),
                 }
             }
 
-            fn identity(&self, o: &NamedCategoryObject) -> &NamedCategoryArrow {
+            fn identity(&self, o: &Self::Object) -> &Self::Arrow {
                 match o {
                     _ if o == &self.objects[0] => &self.arrows[0],
                     _ if o == &self.objects[1] => &self.arrows[1],
+                    _ if o == &self.objects[2] => &self.arrows[2],
                     _ => panic!(""),
                 }
             }
 
-            fn composition_internal<'a>(&self, f: &'a NamedCategoryArrow, g: &'a NamedCategoryArrow) -> &'a NamedCategoryArrow {
+            fn composition_internal<'a>(&'a mut self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow {
                 if f == g {
                     f
-                } else if f == &self.arrows[0] && g == &self.arrows[2] {
+                } else if f == &self.arrows[0] && g == &self.arrows[3] {
                     g
-                } else if f == &self.arrows[2] && g == &self.arrows[1] {
+                } else if f == &self.arrows[3] && g == &self.arrows[1] {
                     f
+                } else if f == &self.arrows[1] && g == &self.arrows[4] {
+                    g
+                } else if f == &self.arrows[4] && g == &self.arrows[2] {
+                    f
+                } else if f == &self.arrows[0] && g == &self.arrows[5] {
+                    g
+                } else if f == &self.arrows[5] && g == &self.arrows[2] {
+                    f
+                } else if f == &self.arrows[3] && g == &self.arrows[4] {
+                    &self.arrows[5]
                 } else {
                     panic!("")
                 }
             }
 
-            fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a NamedCategoryObject> + 'a> {
+            fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Object> + 'a> {
                 Box::new(self.objects.into_iter())
             }
 
-            fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a NamedCategoryArrow> + 'a> {
+            fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Arrow> + 'a> {
                 Box::new(self.arrows.into_iter())
             }
         }
@@ -70,15 +87,15 @@ trait Category {
     fn domain(&self, f: &Self::Arrow) -> &Self::Object;
     fn codomain(&self, f: &Self::Arrow) -> &Self::Object;
     fn identity(&self, a: &Self::Object) -> &Self::Arrow;
-    fn composition<'a>(&'a self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> Option<&'a Self::Arrow> {
+    fn composition<'a>(&'a mut self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> Option<&'a Self::Arrow> {
         if self.codomain(&f) != self.domain(&g) {
             None
         } else {
             Some(self.composition_internal(&f, &g))
         }
     }
-    fn composition_internal<'a>(&'a self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow;
-    fn ci<'a>(&'a self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow {
+    fn composition_internal<'a>(&'a mut self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow;
+    fn ci<'a>(&'a mut self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow {
         self.composition_internal(f, g)
     }
 
@@ -105,7 +122,7 @@ impl Category for Zero {
     fn domain(&self, _f: &()) -> &() { &() }
     fn codomain(&self, _f: &()) -> &() { &() }
     fn identity(&self, _a: &()) -> &() { &() }
-    fn composition_internal<'a>(&self, _f: &'a (), _g: &'a ()) -> &'a () { &() }
+    fn composition_internal<'a>(&mut self, _f: &'a (), _g: &'a ()) -> &'a () { &() }
     fn objects(&self) -> Box<Iterator<Item=&()>> { Box::new(empty()) }
     fn arrows(&self) -> Box<Iterator<Item=&()>> { Box::new(empty()) }
 }
@@ -116,40 +133,35 @@ struct CategoryObject;
 #[derive(PartialEq, Default)]
 struct CategoryArrow;
 
-struct One {
-    object: CategoryObject,
-    arrow: CategoryArrow
+#[derive(Default)]
+struct One<Object, Arrow> {
+    object: Object,
+    arrow: Arrow
 }
 
-impl One {
-    fn new() -> One {
-        One { object: CategoryObject {}, arrow: CategoryArrow {} }
-    }
-}
+impl<O: PartialEq, A: PartialEq> Category for One<O, A> {
+    type Object = O;
+    type Arrow = A;
 
-impl Category for One {
-    type Object = CategoryObject;
-    type Arrow = CategoryArrow;
-
-    fn domain(&self, _f: &CategoryArrow) -> &CategoryObject { &self.object }
-    fn codomain(&self, _f: &CategoryArrow) -> &CategoryObject { &self.object }
-    fn identity(&self, _a: &CategoryObject) -> &CategoryArrow { &self.arrow }
-    fn composition_internal<'a>(&'a self, _f: &'a CategoryArrow, _g: &'a CategoryArrow) -> &'a CategoryArrow { &self.arrow }
-    fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a CategoryObject> + 'a> { Box::new(once(&self.object)) }
-    fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a CategoryArrow> + 'a> { Box::new(once(&self.arrow)) }
+    fn domain(&self, _f: &Self::Arrow) -> &Self::Object { &self.object }
+    fn codomain(&self, _f: &Self::Arrow) -> &Self::Object { &self.object }
+    fn identity(&self, _a: &Self::Object) -> &Self::Arrow { &self.arrow }
+    fn composition_internal<'a>(&'a mut self, _f: &'a Self::Arrow, _g: &'a Self::Arrow) -> &'a Self::Arrow { &self.arrow }
+    fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Object> + 'a> { Box::new(once(&self.object)) }
+    fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Arrow> + 'a> { Box::new(once(&self.arrow)) }
 }
 
 #[derive(Default)]
-struct Two {
-    objects: [CategoryObject; 2],
-    arrows: [CategoryArrow; 3],
+struct Two<Object, Arrow> {
+    objects: [Object; 2],
+    arrows: [Arrow; 3],
 }
 
-impl Category for Two {
-    type Object = CategoryObject;
-    type Arrow = CategoryArrow;
+impl<O: PartialEq, A: PartialEq> Category for Two<O, A> {
+    type Object = O;
+    type Arrow = A;
 
-    fn domain(&self, f: &CategoryArrow) -> &CategoryObject {
+    fn domain(&self, f: &Self::Arrow) -> &Self::Object {
         match f {
             _ if f == &self.arrows[0] => &self.objects[0],
             _ if f == &self.arrows[1] => &self.objects[1],
@@ -158,7 +170,7 @@ impl Category for Two {
         }
     }
 
-    fn codomain(&self, f: &CategoryArrow) -> &CategoryObject {
+    fn codomain(&self, f: &Self::Arrow) -> &Self::Object {
         match f {
             _ if f == &self.arrows[0] => &self.objects[0],
             _ if f == &self.arrows[1] => &self.objects[1],
@@ -167,7 +179,7 @@ impl Category for Two {
         }
     }
 
-    fn identity(&self, o: &CategoryObject) -> &CategoryArrow {
+    fn identity(&self, o: &Self::Object) -> &Self::Arrow {
         match o {
             _ if o == &self.objects[0] => &self.arrows[0],
             _ if o == &self.objects[1] => &self.arrows[1],
@@ -175,7 +187,7 @@ impl Category for Two {
         }
     }
 
-    fn composition_internal<'a>(&self, f: &'a CategoryArrow, g: &'a CategoryArrow) -> &'a CategoryArrow {
+    fn composition_internal<'a>(&mut self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow {
         if f == g {
             f
         } else if f == &self.arrows[0] && g == &self.arrows[2] {
@@ -187,11 +199,11 @@ impl Category for Two {
         }
     }
 
-    fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a CategoryObject> + 'a> {
+    fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Object> + 'a> {
         Box::new(self.objects.into_iter())
     }
 
-    fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a CategoryArrow> + 'a> {
+    fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Arrow> + 'a> {
         Box::new(self.arrows.into_iter())
     }
 }
@@ -199,80 +211,52 @@ impl Category for Two {
 #[derive(PartialEq, Default)]
 struct NamedCategoryObject(&'static str);
 
-#[derive(PartialEq, Default)]
-struct NamedCategoryArrow(&'static str);
-
-let v = vec![];
+#[derive(PartialEq)]
+struct NamedCategoryArrow<'o, Object: 'o>(&'static str, &'o Object, &'o Object);
 
 cat!(Three [X Y Z]);
+type One_ = One<CategoryObject, CategoryArrow>;
+type Two_ = Two<CategoryObject, CategoryArrow>;
+type Three_ = Three<CategoryObject, CategoryArrow>;
+
+#[derive(Default)]
+struct SmallCat<Object, Category> {
+    objects: Vec<Object>,
+    arrows: Vec<Category>,
+}
+type SmallCat_ = SmallCat<CategoryObject, CategoryArrow>;
+
+impl<'o, O: PartialEq> Category for SmallCat<O, NamedCategoryArrow<'o, O>> {
+    type Object = O;
+    type Arrow = NamedCategoryArrow<'o, O>;
+
+    fn domain(&self, f: &Self::Arrow) -> &Self::Object { &f.1 }
+    fn codomain(&self, f: &Self::Arrow) -> &Self::Object { &f.2 }
+    fn identity(&self, o: &Self::Object) -> &Self::Arrow {
+        for a in self.arrows.iter() {
+            if a.1 == o && a.2 == o {
+                return a
+            }
+        }
+        panic!("");
+    }
+    fn composition_internal<'a>(&'a self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow {
+        let new_arrow = NamedCategoryArrow(&format!("{};{}", f.0, g.0), f.1, g.2);
+        self.arrows.push(new_arrow);
+        &self.arrows.last().unwrap()
+    }
+    fn objects<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Object> + 'a> {
+        Box::new(self.objects.iter())
+    }
+    fn arrows<'a>(&'a self) -> Box<Iterator<Item=&'a Self::Arrow> + 'a> {
+        Box::new(self.arrows.iter())
+    }
+}
 
 fn main() {
     let _zero = Zero {};
-    let _one = One::new();
-    let _two = Two::default();
-    let _three = Three::default();
-
-    println!("{:?}", "hello category!");
-
-    // fn triangle(n: i32) -> i32 {
-    //     let mut sum = 0;
-    //     for i in 1..n+1 {
-    //         sum += i;
-    //     }
-    //     sum
-    // }
-    // println!("{:?}", triangle(10));
-    //
-    // fn triangle2(n: i32) -> i32 {
-    //     (1..n+1).fold(0, |sum, item| sum + item)
-    // }
-    // println!("{:?}", triangle2(10));
-    //
-    // println!("There's:");
-    // let v = vec!["antimony", "arsenic", "aluminum", "selenium"];
-    //
-    // for element in &v {
-    //     println!("{}", element);
-    // }
-    //
-    // println!("There's:");
-    // let v2 = vec!["antimony", "arsenic", "aluminum", "selenium"];
-    // let mut iterator = (&v2).into_iter();
-    // while let Some(element) = iterator.next() {
-    //     println!("{}", element);
-    // }
-
-    let v = vec![4, 20, 12, 8, 6];
-    let mut iterator = v.iter();
-    assert_eq!(iterator.next(), Some(&4));
-    assert_eq!(iterator.next(), Some(&20));
-    assert_eq!(iterator.next(), Some(&12));
-    assert_eq!(iterator.next(), Some(&8));
-    assert_eq!(iterator.next(), Some(&6));
-    assert_eq!(iterator.next(), None);
-
-
-    use std::ffi::OsStr;
-    use std::path::Path;
-
-    let path = Path::new("C:/Users/JimB/Downloads/Fedora.iso");
-    let mut iterator = path.iter();
-    assert_eq!(iterator.next(), Some(OsStr::new("C:")));
-    assert_eq!(iterator.next(), Some(OsStr::new("Users")));
-    assert_eq!(iterator.next(), Some(OsStr::new("JimB")));
-
-
-    // You should usually use HashSet,
-    // but its iteration order is nondeterministic,
-    // so BTreeSet works better in examples.
-
-    use std::collections::BTreeSet;
-    let mut favorites = BTreeSet::new();
-    favorites.insert("Lucy in the Sky With Diamonds".to_string());
-    favorites.insert("Liebesträume No. 3".to_string());
-
-    let mut it = favorites.into_iter();
-    assert_eq!(it.next(), Some("Liebesträume No. 3".to_string()));
-    assert_eq!(it.next(), Some("Lucy in the Sky With Diamonds".to_string()));
-    assert_eq!(it.next(), None);
+    let _one = One_::default();
+    let _two = Two_::default();
+    let _three = Three_::default();
+    let _small_cat_zero = SmallCat_::default();
 }
