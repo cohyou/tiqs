@@ -14,17 +14,25 @@ macro_rules! cat {
         )*
 
         let mut equals_list = vec![];
-        $( equals_list.push( (stringify!($f3), vec![stringify!($f1), stringify!($f2)]) ); )*
-
+        $( equals_list.push( (stringify!($f3),
+                              vec![stringify!($f1), stringify!($f2)]) ); )*
         $(
-            let cod_idx = objects.iter().position(|x| x.0 == stringify!($codomain)).unwrap();
-            let dom_idx = objects.iter().position(|x| x.0 == stringify!($domain)).unwrap();
+            let cod_idx = objects.iter()
+                                 .position(|x| x.0 == stringify!($codomain))
+                                 .unwrap();
+            let dom_idx = objects.iter()
+                                 .position(|x| x.0 == stringify!($domain))
+                                 .unwrap();
             let mut equals = vec![];
 
             for eqs in equals_list.iter() {
                 if eqs.0 == stringify!($arrow_name) {
-                    let before_idx = arrows.iter().position(|x| x.name == eqs.1[0]).unwrap();
-                    let after_idx = arrows.iter().position(|x| x.name == eqs.1[1]).unwrap();
+                    let before_idx = arrows.iter()
+                                           .position(|x| x.name == eqs.1[0])
+                                           .unwrap();
+                    let after_idx = arrows.iter()
+                                          .position(|x| x.name == eqs.1[1])
+                                          .unwrap();
                     equals.push(vec![before_idx, after_idx]);
                 }
             }
@@ -272,14 +280,14 @@ struct SmallCat<Object, Arrow> {
 }
 type SmallCat_ = SmallCat<CategoryObject, NamedCategoryArrow>;
 
-impl<'o, O: PartialEq> Category for SmallCat<O, NamedCategoryArrow> {
+impl<O: PartialEq> Category for SmallCat<O, NamedCategoryArrow> {
     type Object = O;
     type Arrow = NamedCategoryArrow;
 
     fn domain(&self, f: &Self::Arrow) -> &Self::Object { &self.objects[f.domain] }
     fn codomain(&self, f: &Self::Arrow) -> &Self::Object { &self.objects[f.codomain] }
     fn identity(&self, o: &Self::Object) -> &Self::Arrow {
-        let idx = self.objects.iter().position(|x| x == o).unwrap(); // oがないわけないので
+        let idx = self.objects.iter().position(|x| x == o).unwrap();
         for a in self.arrows.iter() {
             if a.codomain == idx && a.domain == idx {
                 return a
@@ -288,8 +296,8 @@ impl<'o, O: PartialEq> Category for SmallCat<O, NamedCategoryArrow> {
         panic!("");
     }
     fn composition_internal<'a>(&'a self, f: &'a Self::Arrow, g: &'a Self::Arrow) -> &'a Self::Arrow {
-        let f_idx = self.arrows.iter().position(|x| x == f).unwrap(); // fがないわけないので
-        let g_idx = self.arrows.iter().position(|x| x == g).unwrap(); // gがないわけないので
+        let f_idx = self.arrows.iter().position(|x| x == f).unwrap();
+        let g_idx = self.arrows.iter().position(|x| x == g).unwrap();
         for arrow in self.arrows.iter() {
             for eq in arrow.equals.iter() {
                 if eq[0] == f_idx && eq[1] == g_idx {
@@ -308,17 +316,21 @@ impl<'o, O: PartialEq> Category for SmallCat<O, NamedCategoryArrow> {
 }
 
 trait Functor {
-    type C: Category;
-    type D: Category;
+    type DOM: Category;
+    type COD: Category;
 
-    fn send_objects(object: C::Object) -> <D as Category>::Object;
-    fn send_arrows(arrow: <C as Category>::Arrow) -> <D as Category>::Arrow;
+    fn send_objects(object: <Self::DOM as Category>::Object) -> <Self::COD as Category>::Object;
+    fn send_arrows(arrow: <Self::DOM as Category>::Arrow) -> <Self::COD as Category>::Arrow;
 }
 
-// trait NaturalTransformation {
-//     type C: Category;
-//     type D: Category;
-// }
+trait NaturalTransformation {
+    type C: Category;
+    type D: Category;
+    type F: Functor<DOM=Self::C, COD=Self::D>;
+    type G: Functor<DOM=Self::C, COD=Self::D>;
+
+    fn components() -> Box<Iterator<Item=<Self::D as Category>::Arrow>>;
+}
 
 fn main() {
     let _zero = Zero {};
