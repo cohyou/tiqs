@@ -307,6 +307,19 @@ impl<'o, O: PartialEq> Category for SmallCat<O, NamedCategoryArrow> {
     }
 }
 
+trait Functor {
+    type C: Category;
+    type D: Category;
+
+    fn send_objects(object: C::Object) -> <D as Category>::Object;
+    fn send_arrows(arrow: <C as Category>::Arrow) -> <D as Category>::Arrow;
+}
+
+// trait NaturalTransformation {
+//     type C: Category;
+//     type D: Category;
+// }
+
 fn main() {
     let _zero = Zero {};
     let _one = One_::default();
