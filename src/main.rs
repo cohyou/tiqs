@@ -366,4 +366,9 @@ fn main() {
          h: X -> Z]
         [f;g = h]
     );
+
+    struct A<'a>(&'a str);
+    let aaa = "a".to_string() + "b";
+    let a = A(&aaa);
+    println!("{:?}", a.0);
 }
