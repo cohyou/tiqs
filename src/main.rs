@@ -371,4 +371,22 @@ fn main() {
     let aaa = "a".to_string() + "b";
     let a = A(&aaa);
     println!("{:?}", a.0);
+
+
+    use std::rc::Rc;
+
+    enum Node<'a> {
+        Link(Rc<Node<'a>>, Rc<Node<'a>>),
+        Text(&'a str),
+        Unit
+    };
+
+    let u = Rc::new(Node::Unit);
+    let t1 = Rc::new(Node::Text("a"));
+    let l1 = Rc::new(Node::Link(u.clone(), u.clone()));
+    let l2 = Rc::new(Node::Link(t1.clone(), u.clone()));
+    
+    let t2 = Rc::new(Node::Text("b"));
+    let t3 = Rc::new(Node::Text("c"));
+    let l3 = Rc::new(Node::Link(t2.clone(), t3.clone()));
 }
