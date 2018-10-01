@@ -1,6 +1,6 @@
 macro_rules! cat {
     ([ $( $object:ident )* ]
-     [ $( $arrow_name:ident : $codomain:ident -> $domain:ident )* ]
+     [ $( $arrow_name:ident : $domain:ident -> $codomain:ident )* ]
      [ $( $f1:ident;$f2:ident = $f3:ident )* ]) => ({
         let mut objects = vec![];
         let mut arrows = vec![];
@@ -9,19 +9,19 @@ macro_rules! cat {
             objects.push(NamedCategoryObject(stringify!($object)));
             let idx = objects.iter().count() - 1;
             arrows.push(NamedCategoryArrow {
-                name: stringify!($object), codomain: idx, domain: idx, equals: vec![]
+                name: stringify!($object), domain: idx, codomain: idx, equals: vec![]
             });
         )*
 
-        let mut equals_list = vec![];
+        let mut equals_list: Vec<(&'static str, Vec<&'static str>)> = vec![];
         $( equals_list.push( (stringify!($f3),
                               vec![stringify!($f1), stringify!($f2)]) ); )*
         $(
-            let cod_idx = objects.iter()
-                                 .position(|x| x.0 == stringify!($codomain))
-                                 .unwrap();
             let dom_idx = objects.iter()
                                  .position(|x| x.0 == stringify!($domain))
+                                 .unwrap();
+            let cod_idx = objects.iter()
+                                 .position(|x| x.0 == stringify!($codomain))
                                  .unwrap();
             let mut equals = vec![];
 
@@ -38,8 +38,8 @@ macro_rules! cat {
             }
             arrows.push(NamedCategoryArrow {
                 name: stringify!($arrow_name),
-                codomain: cod_idx,
                 domain: dom_idx,
+                codomain: cod_idx,
                 equals: equals,
             });
         )*
@@ -55,7 +55,7 @@ macro_rules! cat3 {
             arrows: [Arrow; 6],
         }
 
-        impl<O: PartialEq, A: PartialEq> Category for $n<O, A> {
+        impl<O: PartialEq + Eq + Hash + Default + Object + Debug + Clone, A: PartialEq + Debug + Arrow + Default + Clone> Category for $n<O, A> {
             type Object = O;
             type Arrow = A;
 
@@ -128,11 +128,30 @@ macro_rules! cat3 {
 use std::cmp::PartialEq;
 use std::iter::empty;
 use std::iter::once;
+use std::fmt::Debug;
+use std::hash::Hash;
 
-trait Category {
-    type Object: PartialEq;
-    type Arrow: PartialEq;
+trait Arrow {
+    fn name(&self) -> &'static str { "" }
+}
 
+trait Object {
+    fn name(&self) -> &'static str { "" }
+}
+
+impl Arrow for () {
+    fn name(&self) -> &'static str { "" }
+}
+
+impl Object for () {
+    fn name(&self) -> &'static str { "" }
+}
+
+trait Category: Default {
+    type Object: PartialEq + Eq + Hash + Clone + Debug + Object;
+    type Arrow: PartialEq + Debug + Clone + Arrow;
+
+    fn new(objects: Vec<Self::Object>, arrows: Vec<Self::Arrow>) -> Box<Self> { Default::default() }
     fn domain(&self, f: &Self::Arrow) -> &Self::Object;
     fn codomain(&self, f: &Self::Arrow) -> &Self::Object;
     fn identity(&self, a: &Self::Object) -> &Self::Arrow;
@@ -162,6 +181,7 @@ trait Category {
     }
 }
 
+#[derive(Default)]
 struct Zero;
 
 impl Category for Zero {
@@ -188,7 +208,7 @@ struct One<Object, Arrow> {
     arrow: Arrow
 }
 
-impl<O: PartialEq, A: PartialEq> Category for One<O, A> {
+impl<O: PartialEq + Eq + Hash + Clone + Default + Debug + Object, A: PartialEq + Debug + Clone + Arrow + Default> Category for One<O, A> {
     type Object = O;
     type Arrow = A;
 
@@ -206,7 +226,7 @@ struct Two<Object, Arrow> {
     arrows: [Arrow; 3],
 }
 
-impl<O: PartialEq, A: PartialEq> Category for Two<O, A> {
+impl<O: PartialEq + Eq + Hash + Clone + Default + Debug + Object, A: PartialEq + Debug + Clone + Arrow + Default> Category for Two<O, A> {
     type Object = O;
     type Arrow = A;
 
@@ -257,15 +277,23 @@ impl<O: PartialEq, A: PartialEq> Category for Two<O, A> {
     }
 }
 
-#[derive(PartialEq, Default)]
+#[derive(PartialEq, Default, Debug, Hash, Eq, Clone)]
 struct NamedCategoryObject(&'static str);
 
-#[derive(PartialEq, Default)]
+impl Object for NamedCategoryObject {
+    fn name(&self) -> &'static str { self.0 }
+}
+
+#[derive(PartialEq, Default, Debug, Clone)]
 struct NamedCategoryArrow {
     name: &'static str,
-    codomain: usize,
     domain: usize,
+    codomain: usize,
     equals: Vec<Vec<usize>>,
+}
+
+impl Arrow for NamedCategoryArrow {
+    fn name(&self) -> &'static str { self.name }
 }
 
 cat3!(Three [X Y Z]);
@@ -273,17 +301,18 @@ type One_ = One<CategoryObject, CategoryArrow>;
 type Two_ = Two<CategoryObject, CategoryArrow>;
 type Three_ = Three<CategoryObject, CategoryArrow>;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct SmallCat<Object, Arrow> {
     objects: Vec<Object>,
     arrows: Vec<Arrow>,
 }
 type SmallCat_ = SmallCat<CategoryObject, NamedCategoryArrow>;
 
-impl<O: PartialEq> Category for SmallCat<O, NamedCategoryArrow> {
+impl<O: PartialEq + Eq + Hash + Clone + Default + Debug + Object> Category for SmallCat<O, NamedCategoryArrow> {
     type Object = O;
     type Arrow = NamedCategoryArrow;
 
+    fn new(objects: Vec<Self::Object>, arrows: Vec<Self::Arrow>) -> Box<Self> { Box::new(SmallCat { objects, arrows }) }
     fn domain(&self, f: &Self::Arrow) -> &Self::Object { &self.objects[f.domain] }
     fn codomain(&self, f: &Self::Arrow) -> &Self::Object { &self.objects[f.codomain] }
     fn identity(&self, o: &Self::Object) -> &Self::Arrow {
@@ -373,20 +402,88 @@ fn main() {
     println!("{:?}", a.0);
 
 
-    use std::rc::Rc;
+    // use std::rc::Rc;
 
-    enum Node<'a> {
-        Link(Rc<Node<'a>>, Rc<Node<'a>>),
-        Text(&'a str),
-        Unit
-    };
+    // enum Node<'a> {
+    //     Link(Rc<Node<'a>>, Rc<Node<'a>>),
+    //     Text(&'a str),
+    //     Unit
+    // };
 
-    let u = Rc::new(Node::Unit);
-    let t1 = Rc::new(Node::Text("a"));
-    let l1 = Rc::new(Node::Link(u.clone(), u.clone()));
-    let l2 = Rc::new(Node::Link(t1.clone(), u.clone()));
+    // let u = Rc::new(Node::Unit);
+    // let t1 = Rc::new(Node::Text("a"));
+    // let l1 = Rc::new(Node::Link(u.clone(), u.clone()));
+    // let l2 = Rc::new(Node::Link(t1.clone(), u.clone()));
     
-    let t2 = Rc::new(Node::Text("b"));
-    let t3 = Rc::new(Node::Text("c"));
-    let l3 = Rc::new(Node::Link(t2.clone(), t3.clone()));
+    // let t2 = Rc::new(Node::Text("b"));
+    // let t3 = Rc::new(Node::Text("c"));
+    // let l3 = Rc::new(Node::Link(t2.clone(), t3.clone()));
+
+    let _struct_before = cat!(
+        [Person String Integer]
+        [first_name: Person -> String
+         last_name: Person -> String
+         age: Person -> Integer]
+        []
+    );
+
+    let _struct_after1 = cat!(
+        [Person1 String]
+        [name: Person1 -> String]
+        []
+    );
+    let _struct_after2 = cat!(
+        [Person2 Integer]
+        [age: Person2 -> Integer]
+        []
+    );
+    
+    use std::collections::HashMap;
+    use std::collections::HashSet;
+
+    fn split_scheme<C: Category + Default + Debug>(before: C, t: &'static str, f: fn(&'static str) -> &'static str) {
+        let mut splitted: HashMap<&'static str, Vec<&C::Arrow>> = HashMap::new();
+
+        for attribute in before.arrows()
+            .filter(|a| 
+                before.domain(a).name() == t && 
+                before.codomain(a).name() != t) {
+
+            let ss = f(attribute.name());
+            if splitted.contains_key(ss) {
+                let mut entry = splitted.get_mut(ss);
+                entry.unwrap().push(attribute);
+            } else {
+                splitted.insert(ss, vec![attribute]);
+            }            
+        }
+
+        println!("splitted: {:?}", splitted);
+
+        for new_group in splitted.values() {
+            let mut objects = HashSet::new();
+            let mut arrows: Vec<&C::Arrow> = vec![];
+
+            for arrow in new_group.iter() {
+                objects.insert(before.domain(arrow));
+                objects.insert(before.codomain(arrow));
+                arrows.push(arrow.clone());
+            }
+            let objs = objects.into_iter().cloned().collect();
+            println!("objs: {:?}", objs);
+            let new_cat = C::new(objs, arrows.into_iter().cloned().collect());                
+
+            println!("new_cat: {:?}", new_cat);
+        }
+
+        ()
+    }
+
+    split_scheme(_struct_before, "Person", |s| {
+        if s.contains("name") {
+            "name"
+        } else {
+            "age"
+        }
+    });
 }
